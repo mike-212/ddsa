@@ -17,6 +17,9 @@ App buttons are self explanatory.
 ## Example
 ![alt Example image](ddsa_example.png)
 
+## Settings
+Settings are pernamently saved in dcsdsa.ini in <Documents> folder.
+
 ## TODO (sometime)
 - automatic update confirmation
 - webhooks
