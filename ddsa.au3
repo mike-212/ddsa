@@ -4,12 +4,13 @@
 #include <ProgressConstants.au3>
 #include <StaticConstants.au3>
 #include <WindowsConstants.au3>
-#Region ### START Koda GUI section ### Form=d:\documents\_dokumenty\devel\autoit\dcsdsa\ddsa.kxf
+#Region ### START Koda GUI section ### Form=d:\documents\_dokumenty\devel\autoit\ddsa\ddsa.kxf
 $DDSA = GUICreate("DCS Dedicated Server Automation", 580, 394, -1, -1)
 $SettingsMenu = GUICtrlCreateMenu("&Settings")
 $DCSPathMenu = GUICtrlCreateMenuItem("DCS Path", $SettingsMenu)
 $IntervalMenu = GUICtrlCreateMenuItem("Restart Interval", $SettingsMenu)
 $AutostartMenu = GUICtrlCreateMenuItem("Autostart", $SettingsMenu)
+$WebhooksMenu = GUICtrlCreateMenuItem("Add Webhook", $SettingsMenu)
 $HelpMenu = GUICtrlCreateMenu("&Help")
 $AboutMenu = GUICtrlCreateMenuItem("About", $HelpMenu)
 GUISetIcon("D:\Documents\_Dokumenty\Devel\AutoIT\DCSDSA\ddsa_icon.ico", -1)
@@ -28,11 +29,10 @@ $RestartProgress = GUICtrlCreateProgress(72, 152, 422, 20, $PBS_SMOOTH)
 GUICtrlSetColor(-1, 0x008080)
 GUICtrlSetBkColor(-1, 0xE3E3E3)
 GUICtrlCreateGroup("", -99, -99, 1, 1)
-$DCSLoggingGroup = GUICtrlCreateGroup("DCS Server Automation Logging", 24, 216, 529, 145, BitOR($GUI_SS_DEFAULT_GROUP,$BS_CENTER,$BS_FLAT,$WS_CLIPSIBLINGS))
+$DCSLoggingGroup = GUICtrlCreateGroup("DDSA Logging", 24, 216, 529, 145, BitOR($GUI_SS_DEFAULT_GROUP,$BS_CENTER,$BS_FLAT,$WS_CLIPSIBLINGS))
 $DCSLogText = GUICtrlCreateEdit("", 32, 232, 513, 119, BitOR($ES_AUTOVSCROLL,$ES_READONLY,$ES_WANTRETURN,$WS_VSCROLL))
 GUICtrlSetFont(-1, 8, 400, 0, "Courier New")
 GUICtrlCreateGroup("", -99, -99, 1, 1)
-GUISetAccelerators($DDSA_AccelTable)
 GUISetState(@SW_SHOW)
 #EndRegion ### END Koda GUI section ###
 
@@ -51,13 +51,15 @@ Global $CurrentTime = _NowCalc()
 Global $Autostart = 0
 Global $IniFileNamePath = StringFormat("%s\dcsdsa.ini",@MyDocumentsDir) 
 Global $APPTTIMERCHECK = 10000 ;~ msec
-Global $Version = "1.0"
+Global $Version = "1.1"
 Global $GithubLink = ""
+Global $WebhookLink = 0
 
 If FileExists($IniFileNamePath) Then
     $RestartIntervalMin = Number(IniRead($IniFileNamePath,"general","RestartInterval","240"))
     $DCSPath = IniRead($IniFileNamePath,"general","DCSPath","C:\Games\SteamLibrary\steamapps\common\DCSWorld")
     $Autostart = IniRead($IniFileNamePath,"general","Autostart","0")
+    $WebhookLink = IniRead($IniFileNamePath,"network","webhooklink","0")
 EndIf
 
 If $Autostart = 1 Then
@@ -67,6 +69,7 @@ EndIf
 DCSLog(StringFormat("DCS Path: %s",$DCSPath))
 DCSLog(StringFormat("Restart Interval: %d [h]",$RestartIntervalMin/60))
 DCSLog(StringFormat("Autostart: %d",$Autostart))
+DCSLog(StringFormat("Webhook: %s",$WebhookLink))
 
 $AppTimer = TimerInit()
 $TimeTimer = TimerInit()
@@ -105,20 +108,26 @@ While 1
             EndIf
             IniWrite($IniFileNamePath,"general","Autostart",$Autostart)
             DCSLog(StringFormat("New Autostart value: %s",$Autostart))
+
+        Case $WebhooksMenu
+            $WebhookLink = InputBox("Webhooks","Webhook link:")
+            IniWrite($IniFileNamePath,"network","webhooklink",$WebhookLink)
+            DCSLog(StringFormat("New Webhook: %s",$WebhookLink))
+
         Case $AboutMenu
             MsgBox(0,"About", StringFormat("Thanks for using"&@CRLF&"Version: %s"&@CRLF&"Github: %s",$Version,$GithubLink))
 
         Case $StartDCSButton
-            DCSLog("Starting DCS")
+            DCSLog("Starting DCS", 1)
             StartDCSUpdater($DCSPath)
             DCSLog("Web Control : https://digitalcombatsimulator.com/en/personal/server/")
 
         Case $KillDCSButton
-            DCSLog("Killing DCS")
+            DCSLog("Killing DCS", 1)
             KillDCS()
         
         Case $ExitButton
-            DCSLog("Killing DCS")
+            DCSLog("Killing DCS and Exiting DDSA", 1)
             KillDCS()
 			Exit
 
@@ -169,18 +178,18 @@ Func AppUpdate()
     EndIf
     If ProcessExists("DCS_updater.exe") Then ;~ Check if Updater is running
         $DCSStatus = "Checking updates and updating ..."
-        DCSLog("Updating DCS")
+        DCSLog("Updating DCS", 1)
     ElseIf ProcessExists("DCS.exe") Then ;~ Check if DCS is running
         $DCSStatus = "Running"
         If _DateDiff("n",$DCSStartTime,$CurrentTime) > $RestartIntervalMin Then ;~ check interval
             $DCSStatus = "Restarting"
             KillDCS()
             StartDCSUpdater($DCSPath)
-            DCSLog("Restarting DCS")
+            DCSLog("Restarting DCS", 1)
         EndIf
     ElseIf (Not $DCSStatus = "Stopped") Then
         $DCSStatus = "Crashed"
-        DCSLog("DCS Crashed")
+        DCSLog("DCS Crashed", 1)
     EndIf
     GUICtrlSetData($DCSStatusLabel,StringFormat("DCS Server Status: %s",$DCSStatus))
 EndFunc
@@ -208,7 +217,22 @@ Func StartDCSUpdater($DCSPath)
     $DCSStartTime = $CurrentTime
 EndFunc
 
-Func DCSLog($Text)
+Func DCSLog($Text, $SendWebhook = 0)
     $Message = StringFormat("%s > %s\r\n", $CurrentTime,$Text)
     _GUICtrlEdit_InsertText($DCSLogText,$Message)
+    If $WebhookLink And $SendWebhook Then
+        Webhook($Text)
+    EndIf
+EndFunc
+
+Func Webhook($Message)
+    Local $Url = $WebhookLink
+    ConsoleWrite("in webhook")
+    Local $oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+    Local $Packet = '{"content": "```' & $Message & '```"}'
+    ConsoleWrite($Packet)
+    $oHTTP.Open("POST",$Url)
+    $oHTTP.SetRequestHeader("Content-Type","application/json")
+    $oHTTP.Send($Packet)
+    ConsoleWrite("webhook sent")
 EndFunc
