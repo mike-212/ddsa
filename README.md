@@ -1,4 +1,6 @@
 # DCS Dedicated Server Automation
+Small AutoIT app to control DCS Dedicated server automatically including updates. 
+User can setup restart intervals and use webhooks to notify Discord server about status of DCS server.
 
 ## Install
 Just copy exe file anywhere in your computer
