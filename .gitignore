@@ -1,6 +1,6 @@
-dcsas.bat
-ddsa_icon.ico
-ddsa_icon.xcf
-ddsa.code-workspace
+*.bat
+*.ico
+*.xcf
+*.code-workspace
 *.exe
-releases/ddsa_v1.0.zip
+releases/*
