@@ -23,4 +23,3 @@ Settings are pernamently saved in dcsdsa.ini in <Documents> folder.
 ## TODO (sometime)
 - automatic update confirmation
 - webhooks
-- restful api (maybe)
