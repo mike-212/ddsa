@@ -227,12 +227,9 @@ EndFunc
 
 Func Webhook($Message)
     Local $Url = $WebhookLink
-    ConsoleWrite("in webhook")
     Local $oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
     Local $Packet = '{"content": "```' & $Message & '```"}'
-    ConsoleWrite($Packet)
     $oHTTP.Open("POST",$Url)
     $oHTTP.SetRequestHeader("Content-Type","application/json")
     $oHTTP.Send($Packet)
-    ConsoleWrite("webhook sent")
 EndFunc
