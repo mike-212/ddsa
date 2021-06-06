@@ -13,7 +13,7 @@ $AutostartMenu = GUICtrlCreateMenuItem("Autostart", $SettingsMenu)
 $WebhooksMenu = GUICtrlCreateMenuItem("Add Webhook", $SettingsMenu)
 $HelpMenu = GUICtrlCreateMenu("&Help")
 $AboutMenu = GUICtrlCreateMenuItem("About", $HelpMenu)
-GUISetIcon("D:\Documents\_Dokumenty\Devel\AutoIT\DCSDSA\ddsa_icon.ico", -1)
+GUISetIcon(".\ddsa_icon.ico", -1)
 GUISetFont(8, 800, 0, "Noto Sans")
 $StartDCSButton = GUICtrlCreateButton("Update and start DCS", 24, 16, 200, 25)
 $KillDCSButton = GUICtrlCreateButton("Kill DCS", 248, 16, 200, 25)
@@ -58,7 +58,7 @@ Global $WebhookLink = 0
 If FileExists($IniFileNamePath) Then
     $RestartIntervalMin = Number(IniRead($IniFileNamePath,"general","RestartInterval","240"))
     $DCSPath = IniRead($IniFileNamePath,"general","DCSPath","C:\Games\SteamLibrary\steamapps\common\DCSWorld")
-    $Autostart = IniRead($IniFileNamePath,"general","Autostart","0")
+    $Autostart = Number(IniRead($IniFileNamePath,"general","Autostart","0"))
     $WebhookLink = IniRead($IniFileNamePath,"network","webhooklink","0")
 EndIf
 
@@ -123,12 +123,12 @@ While 1
             DCSLog("Web Control : https://digitalcombatsimulator.com/en/personal/server/")
 
         Case $KillDCSButton
-            DCSLog("Killing DCS", 1)
             KillDCS()
+            DCSLog("DCS Killed", 1)
         
         Case $ExitButton
-            DCSLog("Killing DCS and Exiting DDSA", 1)
             KillDCS()
+            DCSLog("Killing DCS and Exiting DDSA", 1)
 			Exit
 
 	EndSwitch
@@ -177,8 +177,15 @@ Func AppUpdate()
         StartDCSUpdater($DCSPath)
     EndIf
     If ProcessExists("DCS_updater.exe") Then ;~ Check if Updater is running
-        $DCSStatus = "Checking updates and updating ..."
-        DCSLog("Updating DCS", 1)
+        If $DCSStatus = "Checking updates ..." Then
+            ConfirmDCSAppUpdate()
+        ElseIf $DCSStatus = "Updating ..." Then
+            DoNothing()
+        Else
+            $DCSStatus = "Checking updates ..."
+            DCSLog("Checking DCS updates ", 1)
+        EndIf
+       
     ElseIf ProcessExists("DCS.exe") Then ;~ Check if DCS is running
         $DCSStatus = "Running"
         If _DateDiff("n",$DCSStartTime,$CurrentTime) > $RestartIntervalMin Then ;~ check interval
@@ -195,17 +202,23 @@ Func AppUpdate()
 EndFunc
 
 Func KillDCS()
-    WinKill("DCS.exe")
-    If(@error) Then
-        DCSLog(StringFormat("ERROR: %s",_WinAPI_GetLastErrorMessage()) )
-        Return 1
+    If ProcessExists("DCS.exe") Then
+        WinKill("DCS.")
     EndIf
+
     $DCSStartTime = 0
     $DCSStatus = "Stopped"
 EndFunc
 
 Func ConfirmDCSAppUpdate()
-    
+    If WinWait("DCS Updater","Welcome to DCS Updater",2) Then
+        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Proceed; INSTANCE:1]")
+        DCSLog("DCS Update confirmed")
+        $DCSStatus = "Updating ..."
+    ElseIf WinWait("DCS Updater","Waiting for operation",2) Or WinWait("DCS Updater","Downloading",2) Then
+        DCSLog("DCS Update Downloading")
+        $DCSStatus = "Updating ..."
+    EndIf
 EndFunc
 
 Func StartDCSUpdater($DCSPath)
@@ -232,4 +245,8 @@ Func Webhook($Message)
     $oHTTP.Open("POST",$Url)
     $oHTTP.SetRequestHeader("Content-Type","application/json")
     $oHTTP.Send($Packet)
+EndFunc
+
+Func DoNothing()
+    Return True
 EndFunc
