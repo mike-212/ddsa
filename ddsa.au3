@@ -212,7 +212,7 @@ EndFunc
 
 Func ConfirmDCSAppUpdate()
     If WinWait("DCS Updater","Welcome to DCS Updater",2) Then
-        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Proceed; INSTANCE:1]")
+        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Update; INSTANCE:1]")
         DCSLog("DCS Update confirmed")
         $DCSStatus = "Updating ..."
     ElseIf WinWait("DCS Updater","Waiting for operation",2) Or WinWait("DCS Updater","Downloading",2) Then
