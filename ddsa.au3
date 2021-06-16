@@ -10,7 +10,7 @@ $SettingsMenu = GUICtrlCreateMenu("&Settings")
 $DCSPathMenu = GUICtrlCreateMenuItem("DCS Path", $SettingsMenu)
 $IntervalMenu = GUICtrlCreateMenuItem("Restart Interval", $SettingsMenu)
 $AutostartMenu = GUICtrlCreateMenuItem("Autostart", $SettingsMenu)
-$WebhooksMenu = GUICtrlCreateMenuItem("Add Webhook", $SettingsMenu)
+$WebhooksMenu = GUICtrlCreateMenuItem("Change Webhook", $SettingsMenu)
 $HelpMenu = GUICtrlCreateMenu("&Help")
 $AboutMenu = GUICtrlCreateMenuItem("About", $HelpMenu)
 GUISetIcon(".\ddsa_icon.ico", -1)
@@ -190,7 +190,7 @@ Func AppUpdate()
         If $DCSStatus <> "Running" Then
             DCSLog("DCS is running", 1)
         EndIf
-        
+
         $DCSStatus = "Running"
         If _DateDiff("n",$DCSStartTime,$CurrentTime) > $RestartIntervalMin Then ;~ check interval
             $DCSStatus = "Restarting"
