@@ -51,7 +51,7 @@ Global $CurrentTime = _NowCalc()
 Global $Autostart = 0
 Global $IniFileNamePath = StringFormat("%s\dcsdsa.ini",@MyDocumentsDir) 
 Global $APPTTIMERCHECK = 10000 ;~ msec
-Global $Version = "1.1"
+Global $Version = "1.2"
 Global $GithubLink = ""
 Global $WebhookLink = 0
 
@@ -187,6 +187,10 @@ Func AppUpdate()
         EndIf
        
     ElseIf ProcessExists("DCS.exe") Then ;~ Check if DCS is running
+        If $DCSStatus <> "Running" Then
+            DCSLog("DCS is running", 1)
+        EndIf
+        
         $DCSStatus = "Running"
         If _DateDiff("n",$DCSStartTime,$CurrentTime) > $RestartIntervalMin Then ;~ check interval
             $DCSStatus = "Restarting"
@@ -211,14 +215,15 @@ Func KillDCS()
 EndFunc
 
 Func ConfirmDCSAppUpdate()
-    If WinWait("DCS Updater","Welcome to DCS Updater",2) Then
-        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Update; INSTANCE:1]")
-        DCSLog("DCS Update confirmed")
-        $DCSStatus = "Updating ..."
-    ElseIf WinWait("DCS Updater","Waiting for operation",2) Or WinWait("DCS Updater","Downloading",2) Then
-        DCSLog("DCS Update Downloading")
-        $DCSStatus = "Updating ..."
+    If WinWait("DCS Updater","Waiting for operation",2) Or WinWait("DCS Updater","Downloading",2) Then
+        DCSLog("DCS Updater - Downloading", 1)
+    ElseIf WinWait("DCS Updater","",5) Then
+        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Update]")
+        ControlClick("DCS Updater","","[CLASS:Button; TEXT:OK]")
+        ControlClick("DCS Updater","","[CLASS:Button; TEXT:Proceed]")
+        DCSLog("DCS Updater - window confirmed")
     EndIf
+    $DCSStatus = "Downloading/Updating ..."
 EndFunc
 
 Func StartDCSUpdater($DCSPath)
