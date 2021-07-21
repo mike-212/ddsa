@@ -51,8 +51,8 @@ Global $CurrentTime = _NowCalc()
 Global $Autostart = 0
 Global $IniFileNamePath = StringFormat("%s\dcsdsa.ini",@MyDocumentsDir) 
 Global $APPTTIMERCHECK = 10000 ;~ msec
-Global $Version = "1.3"
-Global $GithubLink = ""
+Global $Version = "1.3c"
+Global $GithubLink = "https://github.com/mmikulic212/ddsa"
 Global $WebhookLink = 0
 
 If FileExists($IniFileNamePath) Then
@@ -81,7 +81,7 @@ $TimeTimer = TimerInit()
 ;~ EndIf
 
 
-AppUpdate()
+;~ AppUpdate()
 While 1
 	$nMsg = GUIGetMsg()
 	Switch $nMsg
@@ -143,14 +143,6 @@ While 1
         $AppTimer = TimerInit()
         AppUpdate()
     EndIf
-
-    
-    If $DCSStatus = "Stopped" And $Autostart = 1 Then
-        DCSLog("Starting DCS")
-        StartDCSUpdater($DCSPath)
-        DCSLog("Web Control : https://digitalcombatsimulator.com/en/personal/server/")
-    EndIf
-
 WEnd
 
 Func TimeUpdate()
@@ -180,14 +172,13 @@ EndFunc
 
 Func AppUpdate()
     $CurrentTime = _NowCalc()
-    
     If $DCSStatus = "Crashed" Then
         StartDCSUpdater($DCSPath)
     EndIf
     If ProcessExists("DCS_updater.exe") Then ;~ Check if Updater is running
         If $DCSStatus = "Checking updates ..." Then
             ConfirmDCSAppUpdate()
-        ElseIf $DCSStatus = "Updating ..." Then
+        ElseIf $DCSStatus = "Downloading/Updating ..." Then
             DoNothing()
         Else
             $DCSStatus = "Checking updates ..."
@@ -211,6 +202,15 @@ Func AppUpdate()
         $DCSStatus = "Crashed"
         DCSLog("DCS Crashed", 1)
     EndIf
+
+    
+    If ($DCSStatus = "Stopped" Or $DCSStatus = "Crashed") And $Autostart = 1 Then
+        DCSLog("Starting DCS")
+        StartDCSUpdater($DCSPath)
+        DCSLog("Web Control : https://digitalcombatsimulator.com/en/personal/server/")
+    EndIf
+
+
     GUICtrlSetData($DCSStatusLabel,StringFormat("DCS Server Status: %s",$DCSStatus))
 EndFunc
 
