@@ -1,3 +1,6 @@
+;~ TODO
+;~ backup and restore server settings files before and after dcs update - files specified in ini file
+
 #include <ButtonConstants.au3>
 #include <EditConstants.au3>
 #include <GUIConstantsEx.au3>
@@ -46,20 +49,21 @@ GUISetState(@SW_SHOW)
 Global $DCSStatus = "Stopped"
 Global $DCSStartTime = ""
 Global $RestartIntervalMin = 4*60 ;~ 4h
-Global $DCSPath = "C:\Games\SteamLibrary\steamapps\common\DCSWorld"
+Global $DCSPath = "C:\Program Files (x86)\Steam\steamapps\common\DCSWorld"
 Global $CurrentTime = _NowCalc()
 Global $Autostart = 0
 Global $IniFileNamePath = StringFormat("%s\dcsdsa.ini",@MyDocumentsDir) 
 Global $APPTTIMERCHECK = 10000 ;~ msec
-Global $Version = "1.3e"
+Global $Version = "1.3g"
 Global $GithubLink = "https://github.com/mmikulic212/ddsa"
 Global $WebhookLink = 0
+Global $UpdateFinished = 0
 
 If FileExists($IniFileNamePath) Then
-    $RestartIntervalMin = Number(IniRead($IniFileNamePath,"general","RestartInterval","240"))
-    $DCSPath = IniRead($IniFileNamePath,"general","DCSPath","C:\Games\SteamLibrary\steamapps\common\DCSWorld")
-    $Autostart = Number(IniRead($IniFileNamePath,"general","Autostart","0"))
-    $WebhookLink = IniRead($IniFileNamePath,"network","webhooklink","0")
+    $RestartIntervalMin = Number(IniRead($IniFileNamePath,"general","RestartInterval",$RestartIntervalMin))
+    $DCSPath = IniRead($IniFileNamePath,"general","DCSPath",$DCSPath)
+    $Autostart = Number(IniRead($IniFileNamePath,"general","Autostart",$Autostart))
+    $WebhookLink = IniRead($IniFileNamePath,"network","webhooklink",$WebhookLink)
 EndIf
 
 If $Autostart = 1 Then
@@ -74,14 +78,6 @@ DCSLog(StringFormat("Webhook: %s",$WebhookLink))
 $AppTimer = TimerInit()
 $TimeTimer = TimerInit()
 
-;~ If $Autostart = 1 Then
-;~     DCSLog("Starting DCS")
-;~     StartDCSUpdater($DCSPath)
-;~     DCSLog("Web Control : https://digitalcombatsimulator.com/en/personal/server/")
-;~ EndIf
-
-
-;~ AppUpdate()
 While 1
 	$nMsg = GUIGetMsg()
 	Switch $nMsg
@@ -198,9 +194,13 @@ Func AppUpdate()
             KillDCS()
             StartDCSUpdater($DCSPath)
         EndIf
-    ElseIf (Not $DCSStatus = "Stopped") Then
-        $DCSStatus = "Crashed"
-        DCSLog("DCS Crashed", 1)
+    Else
+        If $DCSStatus = "Stopped" Then
+            $DCSStatus = "Stopped"
+        Else
+            $DCSStatus = "Crashed"
+            DCSLog("DCS Crashed", 1)
+        EndIf
     EndIf
 
     
@@ -215,9 +215,14 @@ Func AppUpdate()
 EndFunc
 
 Func KillDCS()
-    If ProcessExists("DCS.exe") Then
-        WinKill("DCS.")
-    EndIf
+    While ProcessExists("DCS.exe")
+        ;~ WinKill("DCS")
+        ProcessClose("DCS.exe")
+    WEnd
+    While ProcessExists("DCS_updater.exe")
+        ;~ WinKill("DCS")
+        ProcessClose("DCS_updater.exe")
+    WEnd
 
     $DCSStartTime = 0
     $DCSStatus = "Stopped"
@@ -225,8 +230,14 @@ EndFunc
 
 Func ConfirmDCSAppUpdate()
     If WinWait("DCS Updater","OK",2) Then
-        ControlClick("DCS Updater","OK","[CLASS:Button; TEXT:OK]")
+        ControlClick("DCS Updater","OK","[CLASS:Button; INSTANCE:1]")
+        $UpdateFinished = $UpdateFinished+1
         DCSLog("DCS Updater - Finished")
+        If $UpdateFinished > 2 Then
+            KillDCS()
+            DCSLog("DCS Updater - Not Responding - killing DCS")
+            $UpdateFinished = 0
+        EndIf
     ElseIf WinWait("DCS Updater","Update Now!",2) Then
         ControlClick("DCS Updater","Update Now!","[CLASS:Button; TEXT:Update Now!]")
         DCSLog("DCS Updater - Update Now!")
